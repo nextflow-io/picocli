@@ -1432,6 +1432,12 @@ public class CommandLine {
          * @return whether this option should be excluded from the usage message
          */
         boolean hidden() default false;
+
+        /**
+         * Implicit parameter value used if the parameter is specified without any value
+         * @return the parameter implicit value
+         */
+        String implicit() default "";
     }
     /**
      * <p>
@@ -1896,9 +1902,14 @@ public class CommandLine {
          * @param field the field whose Option annotation to inspect
          * @return a new {@code Range} based on the Option arity annotation on the specified field */
         public static Range optionArity(Field field) {
-            return field.isAnnotationPresent(Option.class)
-                    ? adjustForType(Range.valueOf(field.getAnnotation(Option.class).arity()), field)
-                    : new Range(0, 0, false, true, "0");
+            Option opt = field.getAnnotation(Option.class);
+            if( opt != null ) {
+                String arity = opt.arity();
+                if( "".equals(arity) && opt.implicit().length()>0 )
+                    arity = "0..1";
+                return adjustForType(Range.valueOf(arity), field);
+            }
+            return new Range(0, 0, false, true, "0");
         }
         /** Returns a new {@code Range} based on the {@link Parameters#arity()} annotation on the specified field,
          * or the field type's default arity if no arity was specified.
@@ -2634,6 +2645,7 @@ public class CommandLine {
             boolean noMoreValues = args.isEmpty();
             String value = args.isEmpty() ? null : trim(args.pop()); // unquote the value
             int result = arity.min; // the number or args we need to consume
+            Option opt = field.getAnnotation(Option.class);
 
             if (arity.min <= 0) { // value is optional
 
@@ -2648,15 +2660,16 @@ public class CommandLine {
                             args.push(value); // we don't consume the value
                         }
                         Boolean currentValue = (Boolean) field.get(command);
-                        value = String.valueOf(currentValue == null ? true : !currentValue); // #147 toggle existing boolean value
+                        boolean implicitValue = opt.implicit().length()==0 || Boolean.parseBoolean(opt.implicit());
+                        value = String.valueOf(currentValue == null ? implicitValue : !currentValue); // #147 toggle existing boolean value
                     }
                 } else if (CharSequence.class.isAssignableFrom(cls)) { // String option with optional value
-                    // #279 track empty string value if no command line argumen
+                    // #279 track empty string value if no command line argument
                     if (isOption(value)) {
                         args.push(value); // we don't consume the value
-                        value = "";
+                        value = opt.implicit();
                     } else if (value == null) {
-                        value = "";
+                        value = opt.implicit();
                     }
                 }
             }

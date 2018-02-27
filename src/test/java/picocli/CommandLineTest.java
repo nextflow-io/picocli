@@ -3389,6 +3389,64 @@ public class CommandLineTest {
     }
 
     @Test
+    public void testOptionImplicitValue() {
+        class App {
+            @Option(names = "-f", implicit = "false", arity = "0..1") Boolean flag;
+            @Option(names = "-o", implicit = "hello", arity = "0..1") String option;
+            @Option(names = "-z") String zeta;
+        }
+        App app = new App();
+        CommandLine commandLine = new CommandLine(app);
+        commandLine.parse("-z","str");
+        assertNull(app.option);
+        assertNull(app.flag);
+        assertEquals("str", app.zeta);
+
+        app = new App();
+        commandLine = new CommandLine(app);
+        commandLine.parse("-z","str", "-o", "-f");
+        assertFalse(app.flag);
+        assertEquals("hello", app.option);
+        assertEquals("str", app.zeta);
+
+        app = new App();
+        commandLine = new CommandLine(app);
+        commandLine.parse("-z","str", "-o", "world", "-f", "true");
+        assertTrue(app.flag);
+        assertEquals("world", app.option);
+        assertEquals("str", app.zeta);
+    }
+
+    @Test
+    public void testOptionImplicitValueWithNoArity() {
+        class App {
+            @Option(names = "-f", implicit = "false" ) Boolean flag;
+            @Option(names = "-o", implicit = "hello" ) String option;
+            @Option(names = "-z") String zeta;
+        }
+        App app = new App();
+        CommandLine commandLine = new CommandLine(app);
+        commandLine.parse("-z","str");
+        assertNull(app.option);
+        assertNull(app.flag);
+        assertEquals("str", app.zeta);
+
+        app = new App();
+        commandLine = new CommandLine(app);
+        commandLine.parse("-z","str", "-o", "-f");
+        assertFalse(app.flag);
+        assertEquals("hello", app.option);
+        assertEquals("str", app.zeta);
+
+        app = new App();
+        commandLine = new CommandLine(app);
+        commandLine.parse("-z","str", "-o", "world", "-f", "true");
+        assertTrue(app.flag);
+        assertEquals("world", app.option);
+        assertEquals("str", app.zeta);
+    }
+
+    @Test
     public void testCommandRequiresMoreThanUnmatchedAnnotation() {
         class App {
             @Unmatched String[] unmatched;
